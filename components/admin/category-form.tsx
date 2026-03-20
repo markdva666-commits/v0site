@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Loader2, Save, Trash2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
@@ -16,9 +17,10 @@ import type { Category } from "@/lib/types"
 
 interface CategoryFormProps {
   category: Category | null
+  categories: Category[]
 }
 
-export function CategoryForm({ category }: CategoryFormProps) {
+export function CategoryForm({ category, categories }: CategoryFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -27,6 +29,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
     name: category?.name || "",
     slug: category?.slug || "",
     description: category?.description || "",
+    parent_id: category?.parent_id || "none",
     sort_order: category?.sort_order?.toString() || "0",
   })
 
@@ -92,6 +95,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
         name: formData.name,
         slug: formData.slug,
         description: formData.description || null,
+        parent_id: formData.parent_id === "none" ? null : formData.parent_id,
         sort_order: Number(formData.sort_order) || 0,
       }
 
@@ -173,6 +177,22 @@ export function CategoryForm({ category }: CategoryFormProps) {
                   placeholder="0"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parent_id">Родительская категория</Label>
+              <Select value={formData.parent_id} onValueChange={(value) => setFormData({ ...formData, parent_id: value })}>
+                <SelectTrigger id="parent_id">
+                  <SelectValue placeholder="Без родителя" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Без родителя</SelectItem>
+                  {categories.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Описание</Label>

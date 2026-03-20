@@ -9,7 +9,7 @@ async function getHomeData() {
   const supabase = await createClient()
 
   const [categoriesRes, productsRes, casesRes] = await Promise.all([
-    supabase.from("categories").select("*").eq("is_published", true).order("sort_order"),
+    supabase.from("categories").select("*").eq("is_published", true).is("parent_id", null).order("sort_order"),
     supabase
       .from("products")
       .select("*, category:categories(name, slug)")

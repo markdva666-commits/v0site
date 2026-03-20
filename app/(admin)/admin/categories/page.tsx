@@ -13,6 +13,7 @@ async function getCategories() {
 
 export default async function AdminCategoriesPage() {
   const categories = await getCategories()
+  const categoriesById = new Map(categories.map((category) => [category.id, category]))
 
   return (
     <div className="space-y-6">
@@ -47,9 +48,12 @@ export default async function AdminCategoriesPage() {
               <TableBody>
                 {categories.map((cat) => (
                   <TableRow key={cat.id}>
-                    <TableCell className="font-medium">{cat.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {cat.parent_id ? <span className="mr-1 text-muted-foreground">--</span> : null}
+                      {cat.name}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{cat.slug}</TableCell>
-                    <TableCell>{cat.sort_order}</TableCell>
+                    <TableCell>{categoriesById.get(cat.parent_id || "")?.name || cat.sort_order}</TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="ghost" size="sm">
                         <Link href={`/admin/categories/${cat.id}`}>

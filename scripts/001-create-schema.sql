@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS categories (
   slug TEXT NOT NULL UNIQUE,
   description TEXT,
   image_url TEXT,
+  parent_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   sort_order INTEGER DEFAULT 0,
   is_published BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -112,6 +113,7 @@ CREATE TABLE IF NOT EXISTS leads (
 );
 
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_categories_parent ON categories(parent_id);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_type ON products(type);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);

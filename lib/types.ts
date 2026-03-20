@@ -4,10 +4,12 @@ export interface Category {
   slug: string
   description: string | null
   image_url: string | null
+  parent_id: string | null
   sort_order: number
   is_published: boolean
   created_at: string
   updated_at: string
+  parent?: Pick<Category, "id" | "name" | "slug"> | null
 }
 
 export interface Manufacturer {

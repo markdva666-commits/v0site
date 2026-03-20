@@ -9,9 +9,10 @@ interface CategoryEditPageProps {
 async function getCategoryData(id: string) {
   const supabase = await createClient()
   const isNew = id === "new"
+  const { data: categories } = await supabase.from("categories").select("*").order("sort_order")
 
   if (isNew) {
-    return { category: null }
+    return { category: null, categories: categories || [] }
   }
 
   const { data } = await supabase.from("categories").select("*").eq("id", id).single()
@@ -20,7 +21,7 @@ async function getCategoryData(id: string) {
     return null
   }
 
-  return { category: data }
+  return { category: data, categories: (categories || []).filter((category) => category.id !== data.id) }
 }
 
 export default async function CategoryEditPage({ params }: CategoryEditPageProps) {
@@ -40,7 +41,7 @@ export default async function CategoryEditPage({ params }: CategoryEditPageProps
         </p>
       </div>
 
-      <CategoryForm category={data.category} />
+      <CategoryForm category={data.category} categories={data.categories} />
     </div>
   )
 }

@@ -28,7 +28,10 @@ async function getCatalogData(params: { category?: string; search?: string; manu
   if (params.category) {
     const cat = categoriesRes.data?.find((c) => c.slug === params.category)
     if (cat) {
-      productsQuery = productsQuery.eq("category_id", cat.id)
+      const childIds = (categoriesRes.data || [])
+        .filter((category) => category.parent_id === cat.id)
+        .map((category) => category.id)
+      productsQuery = productsQuery.in("category_id", [cat.id, ...childIds])
     }
   }
 
@@ -103,6 +106,13 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
   const params = await searchParams
   const { categories, manufacturers, products } = await getCatalogData(params)
   const activeCategory = categories.find((c) => c.slug === params.category)
+  const topCategories = categories.filter((category) => !category.parent_id)
+  const childCategories = new Map(
+    topCategories.map((category) => [
+      category.id,
+      categories.filter((item) => item.parent_id === category.id).sort((a, b) => a.sort_order - b.sort_order),
+    ]),
+  )
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -146,18 +156,32 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
                 >
                   Все категории
                 </Link>
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/catalog?category=${cat.slug}`}
-                    className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                      params.category === cat.slug
-                        ? "bg-secondary text-secondary-foreground font-medium"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    {cat.name}
-                  </Link>
+                {topCategories.map((cat) => (
+                  <div key={cat.id} className="space-y-1">
+                    <Link
+                      href={`/catalog?category=${cat.slug}`}
+                      className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                        params.category === cat.slug
+                          ? "bg-secondary text-secondary-foreground font-medium"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      {cat.name}
+                    </Link>
+                    {(childCategories.get(cat.id) || []).map((child) => (
+                      <Link
+                        key={child.id}
+                        href={`/catalog?category=${child.slug}`}
+                        className={`ml-3 block px-3 py-2 rounded-lg text-sm transition-colors ${
+                          params.category === child.slug
+                            ? "bg-secondary text-secondary-foreground font-medium"
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        {child.name}
+                      </Link>
+                    ))}
+                  </div>
                 ))}
               </div>
             </div>
