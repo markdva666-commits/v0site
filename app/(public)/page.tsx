@@ -72,7 +72,7 @@ export default async function HomePage() {
             <div className="relative hidden lg:block">
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 p-8">
                 <img
-                  src="/placeholder.svg?height=800&width=800&query=Terex%20Fuchs%20340%20material%20handler"
+                  src="/terex-fuchs-340.jpeg"
                   alt="Terex Fuchs 340"
                   className="h-full w-full rounded-xl object-cover shadow-2xl"
                 />
