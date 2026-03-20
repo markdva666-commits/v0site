@@ -6,9 +6,43 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/server"
 import { Search, Filter, ChevronRight } from "lucide-react"
+import type { Category } from "@/lib/types"
 
 interface CatalogPageProps {
   searchParams: Promise<{ category?: string; search?: string; manufacturer?: string }>
+}
+
+function getChildCategories(categories: Category[], parentId: string | null) {
+  return categories.filter((category) => category.parent_id === parentId).sort((a, b) => a.sort_order - b.sort_order)
+}
+
+function getDescendantCategoryIds(categories: Category[], parentId: string) {
+  const ids: string[] = []
+  const stack = [parentId]
+
+  while (stack.length > 0) {
+    const currentId = stack.pop()!
+    const children = categories.filter((category) => category.parent_id === currentId)
+
+    for (const child of children) {
+      ids.push(child.id)
+      stack.push(child.id)
+    }
+  }
+
+  return ids
+}
+
+function getCategoryTrail(categories: Category[], activeCategory: Category | undefined) {
+  const trail: Category[] = []
+  let current = activeCategory
+
+  while (current) {
+    trail.unshift(current)
+    current = categories.find((category) => category.id === current?.parent_id)
+  }
+
+  return trail
 }
 
 async function getCatalogData(params: { category?: string; search?: string; manufacturer?: string }) {
@@ -19,41 +53,50 @@ async function getCatalogData(params: { category?: string; search?: string; manu
     supabase.from("manufacturers").select("*").order("name"),
   ])
 
-  let productsQuery = supabase
-    .from("products")
-    .select("*, category:categories(name, slug), manufacturer:manufacturers(name, slug)")
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
+  const categories = (categoriesRes.data || []) as Category[]
+  const activeCategory = categories.find((category) => category.slug === params.category)
+  const searchMode = Boolean(params.search || params.manufacturer)
+  const shouldLoadProducts = searchMode || (activeCategory ? getChildCategories(categories, activeCategory.id).length === 0 : false)
 
-  if (params.category) {
-    const cat = categoriesRes.data?.find((c) => c.slug === params.category)
-    if (cat) {
-      const childIds = (categoriesRes.data || [])
-        .filter((category) => category.parent_id === cat.id)
-        .map((category) => category.id)
-      productsQuery = productsQuery.in("category_id", [cat.id, ...childIds])
+  let products: Record<string, unknown>[] = []
+
+  if (shouldLoadProducts) {
+    let productsQuery = supabase
+      .from("products")
+      .select("*, category:categories(name, slug), manufacturer:manufacturers(name, slug)")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+
+    if (activeCategory) {
+      const descendantIds = getDescendantCategoryIds(categories, activeCategory.id)
+      productsQuery = productsQuery.in("category_id", [activeCategory.id, ...descendantIds])
+    } else if (!searchMode) {
+      productsQuery = productsQuery.limit(0)
     }
-  }
 
-  if (params.manufacturer) {
-    const mfr = manufacturersRes.data?.find((m) => m.slug === params.manufacturer)
-    if (mfr) {
-      productsQuery = productsQuery.eq("manufacturer_id", mfr.id)
+    if (params.manufacturer) {
+      const mfr = manufacturersRes.data?.find((manufacturer) => manufacturer.slug === params.manufacturer)
+      if (mfr) {
+        productsQuery = productsQuery.eq("manufacturer_id", mfr.id)
+      }
     }
-  }
 
-  if (params.search) {
-    productsQuery = productsQuery.or(
-      `name.ilike.%${params.search}%,sku.ilike.%${params.search}%,description.ilike.%${params.search}%`,
-    )
-  }
+    if (params.search) {
+      productsQuery = productsQuery.or(
+        `name.ilike.%${params.search}%,sku.ilike.%${params.search}%,description.ilike.%${params.search}%`,
+      )
+    }
 
-  const productsRes = await productsQuery
+    const productsRes = await productsQuery
+    products = productsRes.data || []
+  }
 
   return {
-    categories: categoriesRes.data || [],
+    categories,
     manufacturers: manufacturersRes.data || [],
-    products: productsRes.data || [],
+    products,
+    activeCategory,
+    shouldLoadProducts,
   }
 }
 
@@ -102,17 +145,82 @@ function ProductCard({ product }: { product: Record<string, unknown> }) {
   )
 }
 
+function CategoryCard({
+  category,
+  childCount,
+}: {
+  category: Category
+  childCount: number
+}) {
+  return (
+    <Link href={`/catalog?category=${category.slug}`}>
+      <Card className="group h-full transition-all hover:shadow-lg hover:border-primary/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg group-hover:text-primary transition-colors">{category.name}</CardTitle>
+              {category.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{category.description}</p>}
+            </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Badge variant="secondary">{childCount > 0 ? `${childCount} подкатегорий` : "Перейти к товарам"}</Badge>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+function CategoryNavTree({
+  categories,
+  activeSlug,
+  parentId,
+  level = 0,
+}: {
+  categories: Category[]
+  activeSlug?: string
+  parentId: string | null
+  level?: number
+}) {
+  const branch = getChildCategories(categories, parentId)
+
+  if (branch.length === 0) return null
+
+  return (
+    <div className="space-y-1">
+      {branch.map((category) => {
+        const isActive = activeSlug === category.slug
+        const descendants = getChildCategories(categories, category.id)
+
+        return (
+          <div key={category.id} className="space-y-1">
+            <Link
+              href={`/catalog?category=${category.slug}`}
+              className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive ? "bg-secondary text-secondary-foreground font-medium" : "hover:bg-muted"
+              }`}
+              style={{ marginLeft: `${level * 12}px` }}
+            >
+              {category.name}
+            </Link>
+            {isActive && descendants.length > 0 ? (
+              <CategoryNavTree categories={categories} activeSlug={activeSlug} parentId={category.id} level={level + 1} />
+            ) : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 async function CatalogContent({ searchParams }: CatalogPageProps) {
   const params = await searchParams
-  const { categories, manufacturers, products } = await getCatalogData(params)
-  const activeCategory = categories.find((c) => c.slug === params.category)
-  const topCategories = categories.filter((category) => !category.parent_id)
-  const childCategories = new Map(
-    topCategories.map((category) => [
-      category.id,
-      categories.filter((item) => item.parent_id === category.id).sort((a, b) => a.sort_order - b.sort_order),
-    ]),
-  )
+  const { categories, manufacturers, products, activeCategory, shouldLoadProducts } = await getCatalogData(params)
+  const topCategories = getChildCategories(categories, null)
+  const visibleCategories = activeCategory ? getChildCategories(categories, activeCategory.id) : topCategories
+  const categoryTrail = getCategoryTrail(categories, activeCategory)
+  const searchMode = Boolean(params.search || params.manufacturer)
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -123,12 +231,12 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
         </Link>
         <ChevronRight className="h-4 w-4" />
         <span className="text-foreground">Каталог</span>
-        {activeCategory && (
-          <>
+        {categoryTrail.map((category) => (
+          <span key={category.id} className="contents">
             <ChevronRight className="h-4 w-4" />
-            <span className="text-foreground">{activeCategory.name}</span>
-          </>
-        )}
+            <span className="text-foreground">{category.name}</span>
+          </span>
+        ))}
       </nav>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -156,33 +264,7 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
                 >
                   Все категории
                 </Link>
-                {topCategories.map((cat) => (
-                  <div key={cat.id} className="space-y-1">
-                    <Link
-                      href={`/catalog?category=${cat.slug}`}
-                      className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                        params.category === cat.slug
-                          ? "bg-secondary text-secondary-foreground font-medium"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      {cat.name}
-                    </Link>
-                    {(childCategories.get(cat.id) || []).map((child) => (
-                      <Link
-                        key={child.id}
-                        href={`/catalog?category=${child.slug}`}
-                        className={`ml-3 block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          params.category === child.slug
-                            ? "bg-secondary text-secondary-foreground font-medium"
-                            : "hover:bg-muted"
-                        }`}
-                      >
-                        {child.name}
-                      </Link>
-                    ))}
-                  </div>
-                ))}
+                <CategoryNavTree categories={categories} activeSlug={params.category} parentId={null} />
               </div>
             </div>
 
@@ -226,12 +308,24 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
             <div>
               <h1 className="text-2xl font-bold">{activeCategory?.name || "Каталог оборудования"}</h1>
               <p className="text-muted-foreground mt-1">
-                {products.length} {products.length === 1 ? "товар" : products.length < 5 ? "товара" : "товаров"}
+                {searchMode
+                  ? `${products.length} ${products.length === 1 ? "результат" : products.length < 5 ? "результата" : "результатов"}`
+                  : shouldLoadProducts
+                    ? `${products.length} ${products.length === 1 ? "товар" : products.length < 5 ? "товара" : "товаров"}`
+                    : `${visibleCategories.length} ${
+                        visibleCategories.length === 1 ? "подкатегория" : visibleCategories.length < 5 ? "подкатегории" : "подкатегорий"
+                      }`}
               </p>
             </div>
           </div>
 
-          {products.length > 0 ? (
+          {!shouldLoadProducts && visibleCategories.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {visibleCategories.map((category) => (
+                <CategoryCard key={category.id} category={category} childCount={getChildCategories(categories, category.id).length} />
+              ))}
+            </div>
+          ) : products.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
@@ -239,7 +333,9 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-muted-foreground mb-4">По вашему запросу ничего не найдено</p>
+              <p className="text-muted-foreground mb-4">
+                {searchMode ? "По вашему запросу ничего не найдено" : "В этой категории пока нет подкатегорий или товаров"}
+              </p>
               <Button asChild variant="outline">
                 <Link href="/catalog">Сбросить фильтры</Link>
               </Button>
