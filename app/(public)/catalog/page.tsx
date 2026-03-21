@@ -185,11 +185,13 @@ function CategoryCard({
 function CategoryNavTree({
   categories,
   activeSlug,
+  activeTrailIds,
   parentId,
   level = 0,
 }: {
   categories: Category[]
   activeSlug?: string
+  activeTrailIds: Set<string>
   parentId: string | null
   level?: number
 }) {
@@ -201,6 +203,7 @@ function CategoryNavTree({
     <div className="space-y-1">
       {branch.map((category) => {
         const isActive = activeSlug === category.slug
+        const isExpanded = activeTrailIds.has(category.id)
         const descendants = getChildCategories(categories, category.id)
 
         return (
@@ -214,8 +217,14 @@ function CategoryNavTree({
             >
               {category.name}
             </Link>
-            {isActive && descendants.length > 0 ? (
-              <CategoryNavTree categories={categories} activeSlug={activeSlug} parentId={category.id} level={level + 1} />
+            {isExpanded && descendants.length > 0 ? (
+              <CategoryNavTree
+                categories={categories}
+                activeSlug={activeSlug}
+                activeTrailIds={activeTrailIds}
+                parentId={category.id}
+                level={level + 1}
+              />
             ) : null}
           </div>
         )
@@ -230,6 +239,7 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
   const topCategories = getChildCategories(categories, null)
   const visibleCategories = activeCategory ? getChildCategories(categories, activeCategory.id) : topCategories
   const categoryTrail = getCategoryTrail(categories, activeCategory)
+  const activeTrailIds = new Set(categoryTrail.map((category) => category.id))
   const searchMode = Boolean(params.search || params.manufacturer)
 
   return (
@@ -274,7 +284,12 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
                 >
                   Все категории
                 </Link>
-                <CategoryNavTree categories={categories} activeSlug={params.category} parentId={null} />
+                <CategoryNavTree
+                  categories={categories}
+                  activeSlug={params.category}
+                  activeTrailIds={activeTrailIds}
+                  parentId={null}
+                />
               </div>
             </div>
 
