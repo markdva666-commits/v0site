@@ -70,11 +70,11 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="relative hidden lg:block">
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 p-8">
+              <div className="aspect-square overflow-hidden rounded-2xl">
                 <img
                   src="/terex-fuchs-340.jpeg"
                   alt="Terex Fuchs 340"
-                  className="h-full w-full rounded-xl object-cover shadow-2xl"
+                  className="h-full w-full object-cover shadow-2xl"
                 />
               </div>
             </div>
