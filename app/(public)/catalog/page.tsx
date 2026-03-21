@@ -156,6 +156,16 @@ function CategoryCard({
     <Link href={`/catalog?category=${category.slug}`}>
       <Card className="group h-full transition-all hover:shadow-lg hover:border-primary/50">
         <CardHeader className="pb-3">
+          <div className="h-40 rounded-lg bg-gradient-to-br from-secondary to-muted mb-4 overflow-hidden">
+            <img
+              src={
+                category.image_url ||
+                `/placeholder.svg?height=160&width=300&query=${encodeURIComponent(category.name + " industrial equipment") || "/placeholder.svg"}`
+              }
+              alt={category.name}
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            />
+          </div>
           <div className="flex items-start justify-between gap-4">
             <div>
               <CardTitle className="text-lg group-hover:text-primary transition-colors">{category.name}</CardTitle>
