@@ -154,7 +154,7 @@ function CategoryCard({
 }) {
   return (
     <Link href={`/catalog?category=${category.slug}`}>
-      <Card className="group h-full overflow-hidden border-0 bg-transparent shadow-none">
+      <Card className="group h-full overflow-hidden border-0 bg-transparent py-0 shadow-none gap-0">
         <CardContent className="p-0">
           <div className="relative aspect-[16/7] overflow-hidden rounded-xl bg-[#b10f14]">
             <img
