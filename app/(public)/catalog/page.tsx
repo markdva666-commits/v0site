@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Suspense } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/server"
@@ -154,28 +154,30 @@ function CategoryCard({
 }) {
   return (
     <Link href={`/catalog?category=${category.slug}`}>
-      <Card className="group h-full transition-all hover:shadow-lg hover:border-primary/50">
-        <CardHeader className="pb-3">
-          <div className="h-40 rounded-lg bg-gradient-to-br from-secondary to-muted mb-4 overflow-hidden">
+      <Card className="group h-full overflow-hidden border-0 bg-transparent shadow-none">
+        <CardContent className="p-0">
+          <div className="relative aspect-[16/7] overflow-hidden rounded-[28px] bg-[#b10f14]">
             <img
               src={
                 category.image_url ||
-                `/placeholder.svg?height=160&width=300&query=${encodeURIComponent(category.name + " industrial equipment") || "/placeholder.svg"}`
+                `/placeholder.svg?height=420&width=960&query=${encodeURIComponent(category.name + " industrial equipment") || "/placeholder.svg"}`
               }
               alt={category.name}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
-          </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg group-hover:text-primary transition-colors">{category.name}</CardTitle>
-              {category.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{category.description}</p>}
+            <div className="absolute inset-0 bg-black/10 transition-colors duration-300 group-hover:bg-black/20" />
+            <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)] sm:text-3xl lg:text-[2.1rem]">
+                  {category.name}
+                </h2>
+                <p className="text-sm font-medium text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.3)] sm:text-base">
+                  {childCount > 0 ? `${childCount} подкатегорий` : "Перейти к товарам"}
+                </p>
+              </div>
             </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+            <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-white/85 transition-transform duration-300 group-hover:translate-x-1" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <Badge variant="secondary">{childCount > 0 ? `${childCount} подкатегорий` : "Перейти к товарам"}</Badge>
         </CardContent>
       </Card>
     </Link>
@@ -345,7 +347,7 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
           </div>
 
           {!shouldLoadProducts && visibleCategories.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 xl:grid-cols-2">
               {visibleCategories.map((category) => (
                 <CategoryCard key={category.id} category={category} childCount={getChildCategories(categories, category.id).length} />
               ))}
