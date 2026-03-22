@@ -347,7 +347,7 @@ async function CatalogContent({ searchParams }: CatalogPageProps) {
           </div>
 
           {!shouldLoadProducts && visibleCategories.length > 0 ? (
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="grid gap-x-6 gap-y-6 xl:grid-cols-2">
               {visibleCategories.map((category) => (
                 <CategoryCard key={category.id} category={category} childCount={getChildCategories(categories, category.id).length} />
               ))}
