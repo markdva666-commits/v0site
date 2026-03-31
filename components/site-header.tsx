@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 const navigation = [
   { name: "Главная", href: "/" },
   { name: "Каталог", href: "/catalog" },
+  { name: "Ремонт", href: "/repair" },
   { name: "Услуги", href: "/services" },
   { name: "О компании", href: "/about" },
   { name: "Контакты", href: "/contacts" },
@@ -61,7 +62,7 @@ export function SiteHeader() {
               href={item.href}
               className={cn(
                 "px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                pathname === item.href
+                pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
                   ? "bg-secondary text-secondary-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
@@ -93,7 +94,7 @@ export function SiteHeader() {
                     onClick={() => setOpen(false)}
                     className={cn(
                       "px-4 py-3 text-base font-medium rounded-lg transition-colors",
-                      pathname === item.href
+                      pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
                         ? "bg-secondary text-secondary-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted",
                     )}
